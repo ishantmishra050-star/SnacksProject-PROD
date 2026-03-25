@@ -1,7 +1,8 @@
 """Seed the database with initial products and a sample store."""
 import sys
 import os
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# Insert the parent directory (the root of the project) so 'backend' can be imported
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from backend.database import SessionLocal, engine, Base
 from backend.models.user import User, UserRole
