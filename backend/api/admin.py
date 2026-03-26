@@ -7,6 +7,7 @@ from ..models.order import Order, OrderItem, OrderStatus, PaymentStatus
 from ..models.product import StoreProduct, Product
 from ..models.user import User, UserRole
 from ..models.store import Store
+from ..schemas.schemas import OrderStatusUpdate
 from .auth import get_current_user
 
 router = APIRouter(prefix="/api/admin", tags=["Admin"])
@@ -131,7 +132,7 @@ def get_all_orders(
 @router.patch("/orders/{order_id}/status")
 def update_order_status(
     order_id: int,
-    body: dict,
+    body: OrderStatusUpdate,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -140,12 +141,12 @@ def update_order_status(
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
     try:
-        order.status = OrderStatus(body.get("status"))
+        order.status = OrderStatus(body.status)
     except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid status value")
+        valid = [s.value for s in OrderStatus]
+        raise HTTPException(status_code=400, detail=f"Invalid status. Valid values: {valid}")
     db.commit()
-    return {"message": f"Order #{order_id} updated to '{body.get('status')}'"}
-
+    return {"message": f"Order #{order_id} updated to '{body.status}'"}
 
 @router.get("/users")
 def get_all_users(
