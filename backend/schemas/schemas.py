@@ -153,8 +153,13 @@ class OrderItemOut(BaseModel):
     store_product_id: int
     quantity: int
     unit_price: float
+    product_name: Optional[str] = None
+    product_image: Optional[str] = None
     class Config:
         from_attributes = True
+
+class OrderStatusUpdate(BaseModel):
+    status: str  # pending, confirmed, preparing, shipped, delivered, cancelled
 
 class OrderOut(BaseModel):
     id: int

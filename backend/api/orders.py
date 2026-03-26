@@ -3,10 +3,10 @@ from sqlalchemy.orm import Session, joinedload
 from typing import List
 from ..database import get_db
 from ..models.order import Order, OrderItem, OrderStatus, PaymentMethod, PaymentStatus
-from ..models.product import StoreProduct
+from ..models.product import StoreProduct, Product
 from ..models.user import User, UserAddress
 from ..models.store import Store
-from ..schemas.schemas import OrderCreate, OrderOut
+from ..schemas.schemas import OrderCreate, OrderOut, OrderStatusUpdate
 from .auth import get_current_user
 
 router = APIRouter(prefix="/api/orders", tags=["Orders"])
@@ -164,11 +164,21 @@ def list_my_orders(
 ):
     orders = (
         db.query(Order)
-        .options(joinedload(Order.items))
+        .options(
+            joinedload(Order.items)
+            .joinedload(OrderItem.store_product)
+            .joinedload(StoreProduct.product)
+        )
         .filter(Order.user_id == current_user.id)
         .order_by(Order.created_at.desc())
         .all()
     )
+    # Enrich items with product name/image
+    for order in orders:
+        for item in order.items:
+            if item.store_product and item.store_product.product:
+                item.product_name = item.store_product.product.name
+                item.product_image = item.store_product.product.image_url
     return orders
 
 
@@ -180,10 +190,83 @@ def get_order(
 ):
     order = (
         db.query(Order)
-        .options(joinedload(Order.items))
+        .options(
+            joinedload(Order.items)
+            .joinedload(OrderItem.store_product)
+            .joinedload(StoreProduct.product)
+        )
         .filter(Order.id == order_id, Order.user_id == current_user.id)
         .first()
     )
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
+    for item in order.items:
+        if item.store_product and item.store_product.product:
+            item.product_name = item.store_product.product.name
+            item.product_image = item.store_product.product.image_url
     return order
+
+
+@router.patch("/{order_id}/cancel")
+def cancel_order(
+    order_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    order = db.query(Order).filter(Order.id == order_id, Order.user_id == current_user.id).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    if order.status not in (OrderStatus.pending, OrderStatus.confirmed):
+        raise HTTPException(status_code=400, detail=f"Cannot cancel an order with status '{order.status.value}'")
+    order.status = OrderStatus.cancelled
+    if order.payment_status == PaymentStatus.completed:
+        order.payment_status = PaymentStatus.refunded
+    db.commit()
+    return {"message": "Order cancelled successfully", "order_id": order_id}
+
+
+# ─── Admin Endpoints ───
+
+@router.get("/admin/all", response_model=List[OrderOut])
+def admin_list_all_orders(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if current_user.role.value != "store_owner":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    orders = (
+        db.query(Order)
+        .options(
+            joinedload(Order.items)
+            .joinedload(OrderItem.store_product)
+            .joinedload(StoreProduct.product)
+        )
+        .order_by(Order.created_at.desc())
+        .all()
+    )
+    for order in orders:
+        for item in order.items:
+            if item.store_product and item.store_product.product:
+                item.product_name = item.store_product.product.name
+                item.product_image = item.store_product.product.image_url
+    return orders
+
+
+@router.patch("/admin/{order_id}/status")
+def admin_update_order_status(
+    order_id: int,
+    data: OrderStatusUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if current_user.role.value != "store_owner":
+        raise HTTPException(status_code=403, detail="Admin access required")
+    order = db.query(Order).filter(Order.id == order_id).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    try:
+        order.status = OrderStatus(data.status)
+    except ValueError:
+        raise HTTPException(status_code=400, detail=f"Invalid status '{data.status}'. Valid values: {[s.value for s in OrderStatus]}")
+    db.commit()
+    return {"message": f"Order #{order_id} status updated to '{data.status}'"}
