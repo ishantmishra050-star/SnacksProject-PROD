@@ -21,7 +21,7 @@ function Navbar() {
 
     return (
         <nav className="main-navbar">
-            <Link to="/" className="nav-logo">🍘 Vintage Snacks</Link>
+            <Link to="/" className="nav-logo">🍘 Snacko</Link>
             <div className="nav-links">
                 <Link to="/" className="nav-link">Home</Link>
                 <Link to="/stores" className="nav-link">🏪 Shops</Link>
@@ -225,7 +225,7 @@ function AppShell() {
             <footer className="footer">
                 <div className="footer-content">
                     <p className="footer-tagline">Made with ❤️ for Indian Culinary Heritage</p>
-                    <p>Vintage Snacks Showcase &copy; 2026</p>
+                    <p>Snacko &copy; 2026</p>
                 </div>
             </footer>
         </div>

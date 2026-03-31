@@ -1,4 +1,4 @@
-# SnacksProject
+# Snacko
 
 A full-stack application with React frontend and FastAPI backend.
 
@@ -6,8 +6,8 @@ A full-stack application with React frontend and FastAPI backend.
 
 This project is configured with separate repositories for UAT and Production environments:
 
-- **UAT**: [SnacksProject-UAT](https://github.com/ishantmishra050-star/SnacksProject-UAT)
-- **Production**: [SnacksProject-PROD](https://github.com/ishantmishra050-star/SnacksProject-PROD)
+- **UAT**: [Snacko-UAT](https://github.com/ishantmishra050-star/SnacksProject-UAT)
+- **Production**: [Snacko-PROD](https://github.com/ishantmishra050-star/SnacksProject-PROD)
 
 ### Git Remotes
 
